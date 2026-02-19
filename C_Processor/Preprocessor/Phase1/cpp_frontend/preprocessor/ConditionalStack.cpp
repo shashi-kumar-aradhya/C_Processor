@@ -1,58 +1,40 @@
 #include "ConditionalStack.h"
 
-void ConditionalStack::pushIf(bool condition, bool parentActive) {
-    ConditionalFrame frame;
-    frame.parentActive = parentActive;
-    frame.branchTaken = condition && parentActive;
-    frame.currentlyActive = condition && parentActive;
-    stack.push(frame);
+void ConditionalStack::pushIf(bool condition) {
+    bool parentActive = isActive();
+
+    Level level;
+    level.parentActive = parentActive;
+    level.thisBranchActive = parentActive && condition;
+    level.branchTaken = condition;
+
+    stack.push_back(level);
 }
 
-void ConditionalStack::handleElif(bool condition) {
-    if (stack.empty()) return;
-
-    auto& frame = stack.top();
-
-    if (!frame.parentActive) {
-        frame.currentlyActive = false;
+void ConditionalStack::pushElse() {
+    if (stack.empty())
         return;
-    }
 
-    if (frame.branchTaken) {
-        frame.currentlyActive = false;
+    Level& level = stack.back();
+
+    if (!level.parentActive) {
+        level.thisBranchActive = false;
     } else {
-        frame.currentlyActive = condition;
-        if (condition)
-            frame.branchTaken = true;
-    }
-}
-
-void ConditionalStack::handleElse() {
-    if (stack.empty()) return;
-
-    auto& frame = stack.top();
-
-    if (!frame.parentActive) {
-        frame.currentlyActive = false;
-        return;
-    }
-
-    if (frame.branchTaken) {
-        frame.currentlyActive = false;
-    } else {
-        frame.currentlyActive = true;
-        frame.branchTaken = true;
+        level.thisBranchActive = !level.branchTaken;
+        level.branchTaken = true;
     }
 }
 
 void ConditionalStack::pop() {
     if (!stack.empty())
-        stack.pop();
+        stack.pop_back();
 }
 
 bool ConditionalStack::isActive() const {
-    if (stack.empty())
-        return true;
-    return stack.top().currentlyActive;
+    for (const auto& level : stack)
+        if (!level.thisBranchActive)
+            return false;
+
+    return true;
 }
 

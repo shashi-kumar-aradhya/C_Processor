@@ -1,22 +1,20 @@
 #pragma once
-#include <stack>
-
-struct ConditionalFrame {
-    bool parentActive;     // Outer block active?
-    bool branchTaken;      // Has any branch executed?
-    bool currentlyActive;  // Is this branch active?
-};
+#include <vector>
 
 class ConditionalStack {
 public:
-    void pushIf(bool condition, bool parentActive);
-    void handleElif(bool condition);
-    void handleElse();
+    void pushIf(bool condition);
+    void pushElse();
     void pop();
-
     bool isActive() const;
 
 private:
-    std::stack<ConditionalFrame> stack;
+    struct Level {
+        bool parentActive;
+        bool thisBranchActive;
+        bool branchTaken;
+    };
+
+    std::vector<Level> stack;
 };
 

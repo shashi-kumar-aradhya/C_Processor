@@ -1,245 +1,91 @@
 #include "Lexer.h"
 #include <cctype>
 
-Lexer::Lexer(const std::string& input,
-             const std::string& filename)
-    : source(input), file(filename) {}
+Lexer::Lexer(const std::string& in,
+             const std::string& file)
+    : input(in), filename(file) {}
 
-char Lexer::peek(int offset) const {
-    if (pos + offset >= source.size())
-        return '\0';
-    return source[pos + offset];
+char Lexer::peek() const {
+    if (pos >= input.size()) return '\0';
+    return input[pos];
 }
 
 char Lexer::get() {
-    if (eof()) return '\0';
-
-    char c = source[pos++];
-
-    if (c == '\n') {
-        line++;
-        column = 1;
-        atStartOfLine = true;   // logical new line
-    } else {
-        column++;
-        // DO NOT clear atStartOfLine here
-        // it is cleared only after first real token
-    }
-
-    return c;
+    if (pos >= input.size()) return '\0';
+    return input[pos++];
 }
 
-bool Lexer::eof() const {
-    return pos >= source.size();
-}
-
-bool Lexer::isIdentifierStart(char c) const {
-    return std::isalpha(c) || c == '_';
-}
-
-bool Lexer::isIdentifierChar(char c) const {
-    return std::isalnum(c) || c == '_';
-}
-
-void Lexer::skipHorizontalWhitespace(bool& leadingSpace) {
-    while (peek() == ' ' || peek() == '\t' || peek() == '\r') {
-        leadingSpace = true;
+void Lexer::skipWhitespace() {
+    while (std::isspace(static_cast<unsigned char>(peek()))) {
+        if (peek() == '\n')
+            startOfLine = true;
         get();
     }
-}
-
-void Lexer::skipComment(bool& leadingSpace) {
-    if (peek() == '/' && peek(1) == '/') {
-        leadingSpace = true;
-        while (!eof() && get() != '\n');
-    }
-    else if (peek() == '/' && peek(1) == '*') {
-        leadingSpace = true;
-        get(); get();
-        while (!eof()) {
-            if (peek() == '*' && peek(1) == '/') {
-                get(); get();
-                break;
-            }
-            get();
-        }
-    }
-}
-
-Token Lexer::lexIdentifier(bool leadingSpace) {
-    bool startOfLine = atStartOfLine;
-    size_t startCol = column;
-
-    std::string text;
-    while (isIdentifierChar(peek()))
-        text += get();
-
-    atStartOfLine = false;   // FIRST real token on line
-
-    return {
-        TokenKind::Identifier,
-        text,
-        {file, line, (int)startCol},
-        startOfLine,
-        leadingSpace
-    };
-}
-
-Token Lexer::lexNumber(bool leadingSpace) {
-    bool startOfLine = atStartOfLine;
-    size_t startCol = column;
-
-    std::string text;
-    while (std::isalnum(peek()) ||
-           peek() == '.' ||
-           peek() == '+' ||
-           peek() == '-')
-        text += get();
-
-    atStartOfLine = false;
-
-    return {
-        TokenKind::PPNumber,
-        text,
-        {file, line, (int)startCol},
-        startOfLine,
-        leadingSpace
-    };
-}
-
-Token Lexer::lexString(bool leadingSpace) {
-    bool startOfLine = atStartOfLine;
-    size_t startCol = column;
-
-    std::string text;
-    text += get(); // opening "
-
-    while (!eof()) {
-        char c = get();
-        text += c;
-        if (c == '\\')
-            text += get();
-        else if (c == '"')
-            break;
-    }
-
-    atStartOfLine = false;
-
-    return {
-        TokenKind::StringLiteral,
-        text,
-        {file, line, (int)startCol},
-        startOfLine,
-        leadingSpace
-    };
-}
-
-Token Lexer::lexChar(bool leadingSpace) {
-    bool startOfLine = atStartOfLine;
-    size_t startCol = column;
-
-    std::string text;
-    text += get(); // opening '
-
-    while (!eof()) {
-        char c = get();
-        text += c;
-        if (c == '\\')
-            text += get();
-        else if (c == '\'')
-            break;
-    }
-
-    atStartOfLine = false;
-
-    return {
-        TokenKind::CharLiteral,
-        text,
-        {file, line, (int)startCol},
-        startOfLine,
-        leadingSpace
-    };
-}
-
-Token Lexer::lexPunctuator(bool leadingSpace) {
-    bool startOfLine = atStartOfLine;
-    size_t startCol = column;
-
-    static const std::vector<std::string> multi = {
-        ">>=", "<<=", "...", "->",
-        "++", "--", "&&", "||",
-        "<=", ">=", "==", "!=",
-        "<<", ">>", "+=", "-=",
-        "*=", "/=", "%=", "&=",
-        "^=", "|=", "##"
-    };
-
-    for (const auto& m : multi) {
-        if (source.substr(pos, m.size()) == m) {
-            for (size_t i = 0; i < m.size(); ++i)
-                get();
-
-            atStartOfLine = false;
-
-            return {
-                TokenKind::Punctuator,
-                m,
-                {file, line, (int)startCol},
-                startOfLine,
-                leadingSpace
-            };
-        }
-    }
-
-    std::string single(1, get());
-
-    atStartOfLine = false;
-
-    return {
-        TokenKind::Punctuator,
-        single,
-        {file, line, (int)startCol},
-        startOfLine,
-        leadingSpace
-    };
 }
 
 std::vector<Token> Lexer::tokenize() {
     std::vector<Token> tokens;
 
-    while (!eof()) {
+    while (pos < input.size()) {
+        skipWhitespace();
 
-        bool leadingSpace = false;
+        if (pos >= input.size())
+            break;
 
-        // Handle newline explicitly
-        while (peek() == '\n')
-            get();
+        Token tok;
+        tok.atStartOfLine = startOfLine;
+        startOfLine = false;
 
-        skipHorizontalWhitespace(leadingSpace);
-        skipComment(leadingSpace);
+        char c = peek();
 
-        if (eof()) break;
+        // Identifier
+        if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') {
+            std::string id;
+            while (std::isalnum(static_cast<unsigned char>(peek())) ||
+                   peek() == '_')
+                id += get();
 
-        if (isIdentifierStart(peek()))
-            tokens.push_back(lexIdentifier(leadingSpace));
-        else if (std::isdigit(peek()) ||
-                 (peek() == '.' && std::isdigit(peek(1))))
-            tokens.push_back(lexNumber(leadingSpace));
-        else if (peek() == '"')
-            tokens.push_back(lexString(leadingSpace));
-        else if (peek() == '\'')
-            tokens.push_back(lexChar(leadingSpace));
-        else
-            tokens.push_back(lexPunctuator(leadingSpace));
+            tok.kind = TokenKind::Identifier;
+            tok.text = id;
+        }
+        // PP Number
+        else if (std::isdigit(static_cast<unsigned char>(c))) {
+            std::string num;
+            while (std::isalnum(static_cast<unsigned char>(peek())) ||
+                   peek() == '.')
+                num += get();
+
+            tok.kind = TokenKind::PPNumber;
+            tok.text = num;
+        }
+        // 🔥 String literal (FIX)
+        else if (c == '"') {
+            std::string str;
+            str += get(); // opening quote
+
+            while (peek() != '"' && peek() != '\0') {
+                if (peek() == '\\') { // handle escape
+                    str += get();
+                    if (peek() != '\0')
+                        str += get();
+                } else {
+                    str += get();
+                }
+            }
+
+            if (peek() == '"')
+                str += get(); // closing quote
+
+            tok.kind = TokenKind::StringLiteral;
+            tok.text = str;
+        }
+        else {
+            tok.kind = TokenKind::Punctuator;
+            tok.text = std::string(1, get());
+        }
+
+        tokens.push_back(tok);
     }
-
-    tokens.push_back({
-        TokenKind::EndOfFile,
-        "",
-        {file, line, column},
-        false,
-        false
-    });
 
     return tokens;
 }
