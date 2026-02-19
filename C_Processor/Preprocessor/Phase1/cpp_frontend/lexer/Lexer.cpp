@@ -1,6 +1,5 @@
 #include "Lexer.h"
 #include <cctype>
-#include <stdexcept>
 
 Lexer::Lexer(const std::string& input,
              const std::string& filename)
@@ -16,14 +15,17 @@ char Lexer::get() {
     if (eof()) return '\0';
 
     char c = source[pos++];
+
     if (c == '\n') {
         line++;
         column = 1;
-        atStartOfLine = true;
+        atStartOfLine = true;   // logical new line
     } else {
         column++;
-        atStartOfLine = false;
+        // DO NOT clear atStartOfLine here
+        // it is cleared only after first real token
     }
+
     return c;
 }
 
@@ -39,8 +41,8 @@ bool Lexer::isIdentifierChar(char c) const {
     return std::isalnum(c) || c == '_';
 }
 
-void Lexer::skipWhitespace(bool& leadingSpace) {
-    while (std::isspace(peek())) {
+void Lexer::skipHorizontalWhitespace(bool& leadingSpace) {
+    while (peek() == ' ' || peek() == '\t' || peek() == '\r') {
         leadingSpace = true;
         get();
     }
@@ -72,6 +74,8 @@ Token Lexer::lexIdentifier(bool leadingSpace) {
     while (isIdentifierChar(peek()))
         text += get();
 
+    atStartOfLine = false;   // FIRST real token on line
+
     return {
         TokenKind::Identifier,
         text,
@@ -90,9 +94,9 @@ Token Lexer::lexNumber(bool leadingSpace) {
            peek() == '.' ||
            peek() == '+' ||
            peek() == '-')
-    {
         text += get();
-    }
+
+    atStartOfLine = false;
 
     return {
         TokenKind::PPNumber,
@@ -113,12 +117,13 @@ Token Lexer::lexString(bool leadingSpace) {
     while (!eof()) {
         char c = get();
         text += c;
-        if (c == '\\') {
+        if (c == '\\')
             text += get();
-        }
         else if (c == '"')
             break;
     }
+
+    atStartOfLine = false;
 
     return {
         TokenKind::StringLiteral,
@@ -139,12 +144,13 @@ Token Lexer::lexChar(bool leadingSpace) {
     while (!eof()) {
         char c = get();
         text += c;
-        if (c == '\\') {
+        if (c == '\\')
             text += get();
-        }
         else if (c == '\'')
             break;
     }
+
+    atStartOfLine = false;
 
     return {
         TokenKind::CharLiteral,
@@ -173,6 +179,8 @@ Token Lexer::lexPunctuator(bool leadingSpace) {
             for (size_t i = 0; i < m.size(); ++i)
                 get();
 
+            atStartOfLine = false;
+
             return {
                 TokenKind::Punctuator,
                 m,
@@ -184,6 +192,8 @@ Token Lexer::lexPunctuator(bool leadingSpace) {
     }
 
     std::string single(1, get());
+
+    atStartOfLine = false;
 
     return {
         TokenKind::Punctuator,
@@ -198,9 +208,14 @@ std::vector<Token> Lexer::tokenize() {
     std::vector<Token> tokens;
 
     while (!eof()) {
+
         bool leadingSpace = false;
 
-        skipWhitespace(leadingSpace);
+        // Handle newline explicitly
+        while (peek() == '\n')
+            get();
+
+        skipHorizontalWhitespace(leadingSpace);
         skipComment(leadingSpace);
 
         if (eof()) break;

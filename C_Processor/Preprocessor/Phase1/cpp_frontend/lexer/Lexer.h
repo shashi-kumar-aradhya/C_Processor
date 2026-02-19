@@ -1,6 +1,6 @@
 #pragma once
-#include <vector>
 #include <string>
+#include <vector>
 #include "Token.h"
 
 class Lexer {
@@ -13,18 +13,21 @@ public:
 private:
     std::string source;
     std::string file;
-
     size_t pos = 0;
     int line = 1;
     int column = 1;
 
+    // TRUE only at logical beginning of line
     bool atStartOfLine = true;
 
     char peek(int offset = 0) const;
     char get();
     bool eof() const;
 
-    void skipWhitespace(bool& leadingSpace);
+    bool isIdentifierStart(char c) const;
+    bool isIdentifierChar(char c) const;
+
+    void skipHorizontalWhitespace(bool& leadingSpace);
     void skipComment(bool& leadingSpace);
 
     Token lexIdentifier(bool leadingSpace);
@@ -32,8 +35,5 @@ private:
     Token lexString(bool leadingSpace);
     Token lexChar(bool leadingSpace);
     Token lexPunctuator(bool leadingSpace);
-
-    bool isIdentifierStart(char c) const;
-    bool isIdentifierChar(char c) const;
 };
 
