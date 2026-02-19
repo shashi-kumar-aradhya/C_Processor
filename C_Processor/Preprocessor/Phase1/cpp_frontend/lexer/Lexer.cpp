@@ -65,9 +65,10 @@ void Lexer::skipComment(bool& leadingSpace) {
 }
 
 Token Lexer::lexIdentifier(bool leadingSpace) {
+    bool startOfLine = atStartOfLine;
     size_t startCol = column;
-    std::string text;
 
+    std::string text;
     while (isIdentifierChar(peek()))
         text += get();
 
@@ -75,19 +76,20 @@ Token Lexer::lexIdentifier(bool leadingSpace) {
         TokenKind::Identifier,
         text,
         {file, line, (int)startCol},
-        atStartOfLine,
+        startOfLine,
         leadingSpace
     };
 }
 
 Token Lexer::lexNumber(bool leadingSpace) {
+    bool startOfLine = atStartOfLine;
     size_t startCol = column;
-    std::string text;
 
+    std::string text;
     while (std::isalnum(peek()) ||
            peek() == '.' ||
            peek() == '+' ||
-           peek() == '-' )
+           peek() == '-')
     {
         text += get();
     }
@@ -96,13 +98,15 @@ Token Lexer::lexNumber(bool leadingSpace) {
         TokenKind::PPNumber,
         text,
         {file, line, (int)startCol},
-        atStartOfLine,
+        startOfLine,
         leadingSpace
     };
 }
 
 Token Lexer::lexString(bool leadingSpace) {
+    bool startOfLine = atStartOfLine;
     size_t startCol = column;
+
     std::string text;
     text += get(); // opening "
 
@@ -120,15 +124,17 @@ Token Lexer::lexString(bool leadingSpace) {
         TokenKind::StringLiteral,
         text,
         {file, line, (int)startCol},
-        atStartOfLine,
+        startOfLine,
         leadingSpace
     };
 }
 
 Token Lexer::lexChar(bool leadingSpace) {
+    bool startOfLine = atStartOfLine;
     size_t startCol = column;
+
     std::string text;
-    text += get(); // '
+    text += get(); // opening '
 
     while (!eof()) {
         char c = get();
@@ -144,12 +150,13 @@ Token Lexer::lexChar(bool leadingSpace) {
         TokenKind::CharLiteral,
         text,
         {file, line, (int)startCol},
-        atStartOfLine,
+        startOfLine,
         leadingSpace
     };
 }
 
 Token Lexer::lexPunctuator(bool leadingSpace) {
+    bool startOfLine = atStartOfLine;
     size_t startCol = column;
 
     static const std::vector<std::string> multi = {
@@ -165,11 +172,12 @@ Token Lexer::lexPunctuator(bool leadingSpace) {
         if (source.substr(pos, m.size()) == m) {
             for (size_t i = 0; i < m.size(); ++i)
                 get();
+
             return {
                 TokenKind::Punctuator,
                 m,
                 {file, line, (int)startCol},
-                atStartOfLine,
+                startOfLine,
                 leadingSpace
             };
         }
@@ -181,7 +189,7 @@ Token Lexer::lexPunctuator(bool leadingSpace) {
         TokenKind::Punctuator,
         single,
         {file, line, (int)startCol},
-        atStartOfLine,
+        startOfLine,
         leadingSpace
     };
 }

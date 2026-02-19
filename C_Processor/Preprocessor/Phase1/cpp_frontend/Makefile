@@ -6,7 +6,10 @@ TARGET = cpp_frontend
 SRC = \
     main.cpp \
     phase1/Phase1Processor.cpp \
-    lexer/Lexer.cpp
+    lexer/Lexer.cpp \
+    preprocessor/MacroTable.cpp \
+    preprocessor/ConditionalStack.cpp \
+    preprocessor/Preprocessor.cpp
 
 OBJ = $(SRC:.cpp=.o)
 

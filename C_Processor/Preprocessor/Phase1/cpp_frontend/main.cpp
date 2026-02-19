@@ -3,6 +3,7 @@
 #include <sstream>
 #include "phase1/Phase1Processor.h"
 #include "lexer/Lexer.h"
+#include "preprocessor/Preprocessor.h"
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -11,11 +12,6 @@ int main(int argc, char** argv) {
     }
 
     std::ifstream file(argv[1]);
-    if (!file) {
-        std::cerr << "Cannot open file\n";
-        return 1;
-    }
-
     std::stringstream buffer;
     buffer << file.rdbuf();
 
@@ -25,7 +21,10 @@ int main(int argc, char** argv) {
     Lexer lexer(phase1, argv[1]);
     auto tokens = lexer.tokenize();
 
-    for (const auto& t : tokens)
+    Preprocessor pp(tokens);
+    auto result = pp.process();
+
+    for (const auto& t : result)
         std::cout << t.text << "\n";
 }
 
