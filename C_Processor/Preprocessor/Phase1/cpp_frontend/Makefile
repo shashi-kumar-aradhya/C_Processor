@@ -5,7 +5,8 @@ TARGET = cpp_frontend
 
 SRC = \
     main.cpp \
-    phase1/Phase1Processor.cpp
+    phase1/Phase1Processor.cpp \
+    lexer/Lexer.cpp
 
 OBJ = $(SRC:.cpp=.o)
 

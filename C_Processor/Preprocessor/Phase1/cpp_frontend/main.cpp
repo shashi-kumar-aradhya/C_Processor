@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include "phase1/Phase1Processor.h"
+#include "lexer/Lexer.h"
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -19,8 +20,12 @@ int main(int argc, char** argv) {
     buffer << file.rdbuf();
 
     Phase1Processor p(buffer.str());
-    std::string result = p.process();
+    std::string phase1 = p.process();
 
-    std::cout << result;
+    Lexer lexer(phase1, argv[1]);
+    auto tokens = lexer.tokenize();
+
+    for (const auto& t : tokens)
+        std::cout << t.text << "\n";
 }
 
