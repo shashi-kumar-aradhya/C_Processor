@@ -17,14 +17,7 @@ std::vector<Token> Preprocessor::process() {
     while (pos < tokens.size()) {
         Token& tok = tokens[pos];
 
-        std::cout << "[TRACE] Token: "
-                  << tok.text
-                  << " SOL=" << tok.atStartOfLine
-                  << " Active=" << condStack.isActive()
-                  << "\n";
-
         if (atDirectiveStart(tok)) {
-            std::cout << "[TRACE] Directive detected\n";
             pos++;
             handleDirective();
             continue;
@@ -44,9 +37,6 @@ void Preprocessor::handleDirective() {
 
     Token directive = tokens[pos++];
 
-    std::cout << "[TRACE] Handling directive: "
-              << directive.text << "\n";
-
     if (directive.text == "define")
         handleDefine();
     else if (directive.text == "undef")
@@ -57,8 +47,10 @@ void Preprocessor::handleDirective() {
         handleIfdef(true);
     else if (directive.text == "if")
         handleIf();
+    else if (directive.text == "elif")
+        handleElif();
     else if (directive.text == "else")
-        condStack.flip();
+        condStack.handleElse();
     else if (directive.text == "endif")
         condStack.pop();
 }
@@ -78,9 +70,6 @@ void Preprocessor::handleDefine() {
     }
 
     macros.define(name.text, replacement);
-
-    std::cout << "[TRACE] Defined macro: "
-              << name.text << "\n";
 }
 
 void Preprocessor::handleUndef() {
@@ -89,18 +78,15 @@ void Preprocessor::handleUndef() {
 
     Token name = tokens[pos++];
     macros.undef(name.text);
-
-    std::cout << "[TRACE] Undefined macro: "
-              << name.text << "\n";
 }
 
 void Preprocessor::handleIfdef(bool negated) {
     Token name = tokens[pos++];
 
     bool exists = macros.exists(name.text);
-    bool active = negated ? !exists : exists;
+    bool result = negated ? !exists : exists;
 
-    condStack.push(active);
+    condStack.pushIf(result, condStack.isActive());
 }
 
 void Preprocessor::handleIf() {
@@ -115,5 +101,21 @@ void Preprocessor::handleIf() {
     ExpressionParser parser(exprTokens, macros);
     long long result = parser.evaluate();
 
-    condStack.push(result != 0);
+    condStack.pushIf(result != 0, condStack.isActive());
 }
+
+void Preprocessor::handleElif() {
+    std::vector<Token> exprTokens;
+
+    while (pos < tokens.size() &&
+           !tokens[pos].atStartOfLine)
+    {
+        exprTokens.push_back(tokens[pos++]);
+    }
+
+    ExpressionParser parser(exprTokens, macros);
+    long long result = parser.evaluate();
+
+    condStack.handleElif(result != 0);
+}
+

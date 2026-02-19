@@ -19,9 +19,12 @@ private:
 
     bool atDirectiveStart(const Token& tok) const;
     void handleDirective();
+
     void handleDefine();
     void handleUndef();
-    void handleIfdef(bool negated);
+
     void handleIf();
+    void handleIfdef(bool negated);
+    void handleElif();
 };
 
