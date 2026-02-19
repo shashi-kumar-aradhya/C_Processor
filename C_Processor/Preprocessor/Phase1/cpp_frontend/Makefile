@@ -4,12 +4,13 @@ CXXFLAGS = -std=c++20 -Wall -Wextra -O2 -I.
 TARGET = cpp_frontend
 
 SRC = \
-    main.cpp \
-    phase1/Phase1Processor.cpp \
-    lexer/Lexer.cpp \
-    preprocessor/MacroTable.cpp \
-    preprocessor/ConditionalStack.cpp \
-    preprocessor/Preprocessor.cpp
+	main.cpp \
+	phase1/Phase1Processor.cpp \
+	lexer/Lexer.cpp \
+	preprocessor/MacroTable.cpp \
+	preprocessor/ConditionalStack.cpp \
+	preprocessor/ExpressionParser.cpp \
+	preprocessor/Preprocessor.cpp
 
 OBJ = $(SRC:.cpp=.o)
 

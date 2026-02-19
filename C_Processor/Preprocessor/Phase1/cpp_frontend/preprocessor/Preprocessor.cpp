@@ -1,4 +1,5 @@
 #include "Preprocessor.h"
+#include "ExpressionParser.h"
 #include <iostream>
 
 Preprocessor::Preprocessor(const std::vector<Token>& t)
@@ -103,13 +104,16 @@ void Preprocessor::handleIfdef(bool negated) {
 }
 
 void Preprocessor::handleIf() {
-    Token value = tokens[pos++];
+    std::vector<Token> exprTokens;
 
-    bool result = false;
+    while (pos < tokens.size() &&
+           !tokens[pos].atStartOfLine)
+    {
+        exprTokens.push_back(tokens[pos++]);
+    }
 
-    if (value.kind == TokenKind::PPNumber)
-        result = (value.text != "0");
+    ExpressionParser parser(exprTokens, macros);
+    long long result = parser.evaluate();
 
-    condStack.push(result);
+    condStack.push(result != 0);
 }
-
